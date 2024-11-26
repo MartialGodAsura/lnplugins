@@ -8,7 +8,7 @@ var plugin = new (function () {
         var t, s;
         this.id = e.id;
         this.name = e.sourceName;
-        this.icon = "multisrc/lightnovelwp/".concat(e.id.toLowerCase(), "/icon.png");
+        this.icon = e.icon;
         this.site = e.sourceSite;
         var i = (null === (t = e.options) || void 0 === t ? void 0 : t.versionIncrements) || 0;
         this.version = "1.0.".concat(0 + i);
@@ -117,6 +117,7 @@ var plugin = new (function () {
     id: "nhvnovels",
     sourceSite: "https://nhvnovels.com/",
     sourceName: "NHV Novels",
+    icon: "https://nhvnovels.com/favicon.ico",
     options: {},
 });
 
