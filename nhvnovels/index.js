@@ -8,7 +8,7 @@ var plugin = new (function () {
         var t, s;
         this.id = e.id;
         this.name = e.sourceName;
-        this.icon = e.icon;
+        this.icon = "multisrc/lightnovelwp/".concat(e.id.toLowerCase(), "/icon.png");
         this.site = e.sourceSite;
         var i = (null === (t = e.options) || void 0 === t ? void 0 : t.versionIncrements) || 0;
         this.version = "1.0.".concat(0 + i);
@@ -37,17 +37,10 @@ var plugin = new (function () {
             var cover = $("img", this).attr("src") || i.defaultCover;
             var link = $("a", this).attr("href");
 
-            if (typeof link === "string" && link.length > 0) {
-                link = link.startsWith("http") ? link : `${this.site}${link}`;
-            } else {
-                console.error("Novel link is undefined or empty.");
-                link = "";
-            }
-
             novels.push({
                 name: title,
                 cover: cover.startsWith("http") ? cover : `${this.site}${cover}`,
-                url: link,
+                url: link.startsWith("http") ? link : `${this.site}${link}`,
             });
         });
         return novels;
@@ -70,16 +63,9 @@ var plugin = new (function () {
             var name = $("a", this).text().trim();
             var link = $("a", this).attr("href");
 
-            if (typeof link === "string" && link.length > 0) {
-                link = link.startsWith("http") ? link : `${this.site}${link}`;
-            } else {
-                console.error("Chapter link is undefined or empty.");
-                link = "";
-            }
-
             chapters.push({
                 name: name,
-                url: link,
+                url: link.startsWith("http") ? link : `${this.site}${link}`,
             });
         });
 
@@ -117,7 +103,6 @@ var plugin = new (function () {
     id: "nhvnovels",
     sourceSite: "https://nhvnovels.com/",
     sourceName: "NHV Novels",
-    icon: "https://nhvnovels.com/favicon.ico",
     options: {},
 });
 
