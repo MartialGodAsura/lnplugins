@@ -7,7 +7,7 @@ export default {
   name: 'NHV Novels',
   site: 'https://nhvnovels.com/',
   version: '1.0.0',
-  icon: 'https://raw.githubusercontent.com/MartialGodAsura/lnplugins/main/assets/nhvvnovels-icon.jpg',
+  icon: 'https://raw.githubusercontent.com/MartialGodAsura/lnplugins/main/assets/nhvnovels-icon.jpg',
 
   async popularNovels(page) {
     const url = `https://nhvnovels.com/popular?page=${page}`;
