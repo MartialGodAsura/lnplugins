@@ -29,29 +29,29 @@ var plugin = new (function () {
         });
     };
 
-plugin.prototype.parseNovels = function (html) {
-    var $ = t.load(html),
-        novels = [];
-    $("div.novel-item").each(function () {
-        var title = $("h2.novel-title", this).text().trim();
-        var cover = $("img", this).attr("src") || i.defaultCover;
-        var link = $("a", this).attr("href");
+    plugin.prototype.parseNovels = function (html) {
+        var $ = t.load(html),
+            novels = [];
+        $("div.novel-item").each(function () {
+            var title = $("h2.novel-title", this).text().trim();
+            var cover = $("img", this).attr("src") || i.defaultCover;
+            var link = $("a", this).attr("href");
 
-        if (link) {
-            link = link.startsWith("http") ? link : `${this.site}${link}`;
-        } else {
-            console.error("Novel link is undefined.");
-            link = "";
-        }
+            if (typeof link === "string" && link.length > 0) {
+                link = link.startsWith("http") ? link : `${this.site}${link}`;
+            } else {
+                console.error("Novel link is undefined or empty.");
+                link = "";
+            }
 
-        novels.push({
-            name: title,
-            cover: cover.startsWith("http") ? cover : `${this.site}${cover}`,
-            url: link,
+            novels.push({
+                name: title,
+                cover: cover.startsWith("http") ? cover : `${this.site}${cover}`,
+                url: link,
+            });
         });
-    });
-    return novels;
-};
+        return novels;
+    };
 
     plugin.prototype.fetchNovelList = function (page) {
         var url = `${this.site}/novels/?page=${page}`;
@@ -63,33 +63,33 @@ plugin.prototype.parseNovels = function (html) {
             });
     };
 
-plugin.prototype.parseNovelDetails = function (html) {
-    var $ = t.load(html),
-        chapters = [];
-    $("ul.chapter-list li").each(function () {
-        var name = $("a", this).text().trim();
-        var link = $("a", this).attr("href");
+    plugin.prototype.parseNovelDetails = function (html) {
+        var $ = t.load(html),
+            chapters = [];
+        $("ul.chapter-list li").each(function () {
+            var name = $("a", this).text().trim();
+            var link = $("a", this).attr("href");
 
-        if (link) {
-            link = link.startsWith("http") ? link : `${this.site}${link}`;
-        } else {
-            console.error("Chapter link is undefined.");
-            link = "";
-        }
+            if (typeof link === "string" && link.length > 0) {
+                link = link.startsWith("http") ? link : `${this.site}${link}`;
+            } else {
+                console.error("Chapter link is undefined or empty.");
+                link = "";
+            }
 
-        chapters.push({
-            name: name,
-            url: link,
+            chapters.push({
+                name: name,
+                url: link,
+            });
         });
-    });
 
-    return {
-        name: $("h1.novel-title").text().trim(),
-        cover: $("img.novel-cover").attr("src") || i.defaultCover,
-        summary: $("div.novel-summary").text().trim(),
-        chapters: chapters,
+        return {
+            name: $("h1.novel-title").text().trim(),
+            cover: $("img.novel-cover").attr("src") || i.defaultCover,
+            summary: $("div.novel-summary").text().trim(),
+            chapters: chapters,
+        };
     };
-};
 
     plugin.prototype.fetchNovelDetails = function (novelUrl) {
         return this.safeFetch(novelUrl)
