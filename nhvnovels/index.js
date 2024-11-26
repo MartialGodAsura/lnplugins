@@ -4,7 +4,11 @@ export default {
   version: '1.0.0',
   async popularNovels() {
     return [
-      { name: 'Test Novel', cover: '', path: '/test-path' },
+      {
+        name: 'Example Novel',
+        cover: 'https://example.com/cover.jpg',
+        path: '/example-novel',
+      },
     ];
   },
 };
