@@ -12,7 +12,6 @@ export default {
   async fetchNovelList() {
     try {
       const novels = [];
-      console.log('Fetching novel list from NHV Novels...');
       const response = await axios.get('https://nhvnovels.com/novels/');
       const $ = cheerio.load(response.data);
 
@@ -20,7 +19,6 @@ export default {
         const title = $(el).find('h2.novel-title').text().trim();
         const novelUrl = $(el).find('a').attr('href');
         const coverUrl = $(el).find('img').attr('src');
-
         novels.push({
           title,
           url: novelUrl.startsWith('http') ? novelUrl : `https://nhvnovels.com${novelUrl}`,
@@ -28,7 +26,6 @@ export default {
         });
       });
 
-      console.log(`Fetched ${novels.length} novels.`);
       return novels;
     } catch (error) {
       console.error('Error fetching novel list:', error.message);
@@ -38,7 +35,6 @@ export default {
 
   async fetchNovelDetails(novelUrl) {
     try {
-      console.log(`Fetching details for novel: ${novelUrl}`);
       const response = await axios.get(novelUrl);
       const $ = cheerio.load(response.data);
 
@@ -57,7 +53,6 @@ export default {
         });
       });
 
-      console.log(`Fetched ${chapters.length} chapters for novel: ${title}`);
       return {
         title,
         author,
@@ -66,19 +61,17 @@ export default {
         chapters,
       };
     } catch (error) {
-      console.error(`Error fetching novel details for ${novelUrl}:`, error.message);
+      console.error(`Error fetching details for ${novelUrl}:`, error.message);
       return null;
     }
   },
 
   async fetchChapterContent(chapterUrl) {
     try {
-      console.log(`Fetching content for chapter: ${chapterUrl}`);
       const response = await axios.get(chapterUrl);
       const $ = cheerio.load(response.data);
 
       const content = $('div.chapter-content').html();
-      console.log(`Fetched content for chapter: ${chapterUrl}`);
       return content || '<p>No content available.</p>';
     } catch (error) {
       console.error(`Error fetching chapter content for ${chapterUrl}:`, error.message);
