@@ -6,9 +6,9 @@ module.exports = {
     name: "NHV Novels",
     site: "https://nhvnovels.com/",
     version: "1.0.0",
-    icon: "https://example.com/icon.png", // Replace with the actual URL for your plugin icon
+    icon: "https://example.com/icon.png", 
 
-    // Fetch popular novels
+    
     popularNovels: async function (page) {
         const url = `https://nhvnovels.com/popular?page=${page}`;
         const result = await fetch(url);
@@ -30,7 +30,7 @@ module.exports = {
         return novels;
     },
 
-    // Fetch novel details and chapters
+    
     parseNovelAndChapters: async function (novelUrl) {
         const result = await fetch(this.site + novelUrl);
         const $ = require('cheerio').load(result);
@@ -64,7 +64,7 @@ module.exports = {
         };
     },
 
-    // Fetch chapter content
+    
     parseChapter: async function (chapterUrl) {
         const result = await fetch(this.site + chapterUrl);
         const $ = require('cheerio').load(result);
@@ -72,7 +72,7 @@ module.exports = {
         return $('.chapter-content').html();
     },
 
-    // Search novels
+    
     searchNovels: async function (searchTerm) {
         const url = `${this.site}/search?query=${encodeURIComponent(searchTerm)}`;
         const result = await fetch(url);
