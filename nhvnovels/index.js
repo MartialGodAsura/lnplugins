@@ -6,7 +6,7 @@ module.exports = {
     name: "NHV Novels",
     site: "https://nhvnovels.com/",
     version: "1.0.0",
-    icon: "https://cdn-icons-png.flaticon.com/512/166/166344.png", 
+    icon: "https://raw.githubusercontent.com/MartialGodAsura/lnplugins/main/assests/nhvvnovels-icon.jpg", 
 
     
     popularNovels: async function (page) {
