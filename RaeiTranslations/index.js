@@ -1,81 +1,394 @@
-var e = this && this.__awaiter || function (e, t, a, l) {
-    return new (a || (a = Promise))(function (r, n) {
-        function i(e) { try { s(l.next(e)); } catch (e) { n(e); } }
-        function o(e) { try { s(l.throw(e)); } catch (e) { n(e); } }
-        function s(e) { var t; e.done ? r(e.value) : (t = e.value, t instanceof a ? t : new a(function (e) { e(t); })).then(i, o); }
-        s((l = l.apply(e, t || [])).next());
-    });
-}, t = this && this.__generator || function (e, t) {
-    var a, l, r, n, i = { label: 0, sent: function () { if (1 & r[0]) throw r[1]; return r[1]; }, trys: [], ops: [] };
-    return n = { next: o(0), throw: o(1), return: o(2) }, "function" == typeof Symbol && (n[Symbol.iterator] = function () { return this; }), n;
-    function o(o) { return function (s) { return function (o) {
-        if (a) throw new TypeError("Generator is already executing.");
-        for (; i && (i = 0, o[0] && (r = 0)), i;) try {
-            if (a = 1, l && (r = 2 & o[0] ? l.return : o[0] ? l.throw || ((r = l.return) && r.call(l), 0) : l.next) && !(r = r.call(l, o[1])).done) return r;
-            switch (l = 0, r && (o = [2 & o[0], r.value]), o[0]) {
-                case 0: case 1: r = o; break;
-                case 4: return i.label++, { value: o[1], done: !1 };
-                case 5: i.label++, l = o[1], o = [0]; continue;
-                case 7: o = i.ops.pop(), i.trys.pop(); continue;
-                default: if (!(r = i.trys, (r = r.length > 0 && r[r.length - 1]) || 6 !== o[0] && 2 !== o[0])) { i = 0; continue; }
-                    if (3 === o[0] && (!r || o[1] > r[0] && o[1] < r[3])) { i.label = o[1]; break; }
-                    if (6 === o[0] && i.label < r[1]) { i.label = r[1], r = o; break; }
-                    if (r && i.label < r[2]) { i.label = r[2], i.ops.push(o); break; }
-                    r[2] && i.ops.pop(), i.trys.pop(); continue;
-            }
-            o = t.call(e, i);
-        } catch (e) { o = [6, e], l = 0; } finally { a = r = 0; }
-        if (5 & o[0]) throw o[1]; return { value: o[0] ? o[1] : void 0, done: !0 };
-    }([o, s]); };
-}, a = this && this.__spreadArray || function (e, t, a) {
-    if (a || 2 === arguments.length) for (var l, r = 0, n = t.length; r < n; r++) !l && r in t || (l || (l = Array.prototype.slice.call(t, 0, r)), l[r] = t[r]);
-    return e.concat(l || Array.prototype.slice.call(t));
-}, l = this && this.__importDefault || function (e) { return e && e.__esModule ? e : { default: e }; };
-Object.defineProperty(exports, "__esModule", { value: !0 });
-var r = require("@libs/fetch"), n = require("cheerio"), i = require("@libs/defaultCover"), o = require("@libs/novelStatus"), s = l(require("dayjs")), u = function (e, t) { return new RegExp(t.join("|")).test(e); }, c = new (function () {
-    function l(e) {
-        var t;
-        this.parseData = function (e) {
-            var t, a = (0, s.default)(), l = (null === (t = e.match(/\d+/)) || void 0 === t ? void 0 : t[0]) || "", r = parseInt(l, 10);
-            if (!l) return e;
-            if (u(e, ["second", "sec"])) a = a.subtract(r, "second");
-            else if (u(e, ["minute", "min"])) a = a.subtract(r, "minute");
-            else if (u(e, ["hour", "hr"])) a = a.subtract(r, "hours");
-            else if (u(e, ["day"])) a = a.subtract(r, "days");
-            else if (u(e, ["week"])) a = a.subtract(r, "week");
-            else if (u(e, ["month"])) a = a.subtract(r, "month");
-            else { if (!u(e, ["year"])) return "Invalid Date" !== (0, s.default)(e).format("LL") ? (0, s.default)(e).format("LL") : e; a = a.subtract(r, "year"); }
-            return a.format("LL");
-        };
-        this.id = e.id;
-        this.name = e.sourceName;
-        this.icon = "multisrc/madara/".concat(e.id.toLowerCase(), "/icon.png");
-        this.site = e.sourceSite;
-        var a = (null === (t = e.options) || void 0 === t ? void 0 : t.versionIncrements) || 0;
-        this.version = "1.0.".concat(5 + a);
-        this.options = e.options;
-        this.filters = e.filters;
+import { fetchApi } from '@libs/fetch';
+import { Filters, FilterTypes } from '@libs/filterInputs';
+import { Plugin } from '@typings/plugin';
+
+/**
+ * Example for novel API:
+ * https://genesistudio.com/novels/dlh/__data.json?x-sveltekit-invalidated=001
+ * -> to view novel remove '__data.json?x-sveltekit-invalidated=001'
+ *
+ * Example for chapter API:
+ * https://genesistudio.com/viewer/2443/__data.json?x-sveltekit-invalidated=001
+ * -> to view chapter remove '__data.json?x-sveltekit-invalidated=001'
+ */
+
+class Genesis implements Plugin.PluginBase {
+  id = 'raeitranslations';
+  name = 'Raei Translations';
+  icon = 'https://raw.githubusercontent.com/MartialGodAsura/lnplugins/refs/heads/main/assests/raei-icon.jpg';
+  site = 'https://raeitranslations.com/';
+  version = '1.0.5';
+
+  imageRequestInit?: Plugin.ImageRequestInit | undefined = {
+    headers: {
+      'referrer': this.site,
+    },
+  };
+
+  async parseNovels(json: any[]): Promise<Plugin.SourceNovel[]> {
+    return json.map((novel: any) => ({
+      name: novel.novel_title,
+      path: `/novels/${novel.abbreviation}`,
+      cover: novel.cover,
+    }));
+  }
+
+  async popularNovels(
+    pageNo: number,
+    { showLatestNovels, filters }: Plugin.PopularNovelsOptions,
+  ): Promise<Plugin.SourceNovel[]> {
+    if (pageNo !== 1) return [];
+    let link = `${this.site}/api/search?`;
+    if (showLatestNovels) {
+      link += 'sort=Recent';
+    } else {
+      if (filters!.genres.value) {
+        link += filters!.genres.value;
+      }
+      link += `&${filters!.storyStatus.value}&${filters!.sort.value}`;
     }
-    return l.prototype.getCheerio = function (a, l) {
-        return e(this, void 0, void 0, function () {
-            var e, i, o, s;
-            return t(this, function (t) {
-                switch (t.label) {
-                    case 0: return [4, (0, r.fetchApi)(a)];
-                    case 1:
-                        if (!(e = t.sent()).ok && 1 != l) throw new Error("Could not reach site (" + e.status + ") try to open in webview.");
-                        return o = n.load, [4, e.text()];
-                    case 2:
-                        return i = o.apply(void 0, [t.sent()]), s = i("title").text().trim(), this.getHostname(a) != this.getHostname(e.url) || "Bot Verification" == s ? [2, null] : [2, i];
-                }
-            });
+    const json = await fetchApi(link).then(r => r.json());
+    return this.parseNovels(json);
+  }
+
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const url = `${this.site}${novelPath}/__data.json?x-sveltekit-invalidated=001`;
+
+    // Fetch the novel's data in JSON format
+    const json = await fetchApi(url).then(r => r.json());
+    const nodes = json.nodes;
+
+    // Extract the main novel data from the nodes
+    const data = this.extractNovelData(nodes);
+
+    // Initialize the novel object with default values
+    const novel: Plugin.SourceNovel = {
+      path: novelPath,
+      name: '',
+      cover: '',
+      summary: '',
+      author: '',
+      status: 'Unknown',
+      chapters: [],
+    };
+
+    // Parse and assign novel metadata (title, cover, summary, author, etc.)
+    this.populateNovelMetadata(novel, data);
+
+    // Parse the chapters if available and assign them to the novel object
+    novel.chapters = this.extractChapters(data);
+
+    return novel;
+  }
+
+  // Helper function to extract novel data from nodes
+  extractNovelData(nodes: any[]): any {
+    return nodes
+      .filter((node: { type: string }) => node.type === 'data')
+      .map((node: { data: any }) => node.data)[0];
+  }
+
+  // Helper function to populate novel metadata
+  populateNovelMetadata(novel: Plugin.SourceNovel, data: any): void {
+    for (const key in data) {
+      const value = data[key];
+
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        'novel_title' in value
+      ) {
+        novel.name = data[value.novel_title] || 'Unknown Title';
+        novel.cover = data[value.cover] || '';
+        novel.summary = data[value.synopsis] || '';
+        novel.author = data[value.author] || 'Unknown Author';
+        novel.genres =
+          (data[value.genres] as number[])
+            .map((genreId: number) => data[genreId])
+            .join(', ') || 'Unknown Genre';
+        novel.status = value.release_days ? 'Ongoing' : 'Completed';
+        break; // Break the loop once metadata is found
+      }
+    }
+  }
+
+  // Helper function to extract and format chapters
+  extractChapters(data: any): Plugin.ChapterItem[] {
+    for (const key in data) {
+      const value = data[key];
+
+      // Change string here if the chapters are stored under a different key
+      const chapterKey = 'chapters';
+      if (typeof value === 'object' && value !== null && chapterKey in value) {
+        const chapterData = this.decodeData(data[value[chapterKey]]);
+
+        // Object.values will give us an array of arrays (any[][])
+        const chapterArrays: any[][] = Object.values(chapterData);
+
+        // Flatten and format the chapters
+        return chapterArrays.flatMap((chapters: any[]) => {
+          return chapters
+            .map((chapter: any) => this.formatChapter(chapter))
+            .filter(
+              (chapter): chapter is Plugin.ChapterItem => chapter !== null,
+            );
         });
-    }, l;
-}())({
-    id: "raeitranslations",
-    sourceSite: "https://raeitranslations.com/",
-    sourceName: "Raei Translations",
-    options: { useNewChapterEndpoint: true },
-    filters: {}
-});
-exports.default = c;
+      }
+    }
+
+    return [];
+  }
+
+  // Helper function to format an individual chapter
+  formatChapter(chapter: any): Plugin.ChapterItem | null {
+    const { id, chapter_title, chapter_number, required_tier, date_created } =
+      chapter;
+
+    // Ensure required fields are present and valid
+    if (
+      id &&
+      chapter_title &&
+      chapter_number &&
+      required_tier !== null &&
+      date_created
+    ) {
+      const number = parseInt(chapter_number, 10) || 0;
+      const requiredTier = parseInt(required_tier, 10) || 0;
+
+      // Only process chapters with a 'requiredTier' of 0
+      if (requiredTier === 0) {
+        return {
+          name: `Chapter ${number}: ${chapter_title}`,
+          path: `/viewer/${id}`,
+          releaseTime: date_created,
+          chapterNumber: number,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  decodeData(code: any) {
+    const offset = this.getOffsetIndex(code);
+    const params = this.getDecodeParams(code);
+    const constant = this.getConstant(code);
+    const data = this.getStringsArrayRaw(code);
+
+    const getDataAt = (x: number) => data[x - offset];
+
+    //reshuffle data array
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      try {
+        const some_number = this.applyDecodeParams(params, getDataAt);
+        if (some_number === constant) break;
+        else data.push(data.shift());
+      } catch (err) {
+        data.push(data.shift());
+      }
+    }
+
+    return this.getChapterData(code, getDataAt);
+  }
+
+  getOffsetIndex(code: string) {
+    // @ts-ignore
+    const string = /{(\w+)=\1-0x(?<offset>[0-9a-f]+);/.exec(code).groups.offset;
+    return parseInt(string, 16);
+  }
+
+  /**
+   * @returns {string[]}
+   */
+  getStringsArrayRaw(code: string) {
+    // @ts-ignore
+    let json = /function \w+\(\){var \w+=(?<array>\['.+']);/.exec(code).groups
+      .array;
+
+    //replace string single quotes with double quotes and add escaped chars
+    json = json.replace(/'(.+?)'([,\]])/g, (match, p1, p2) => {
+      return `"${p1.replace(/\\x([0-9a-z]{2})/g, (match: any, p1: string) => {
+        //hexadecimal unicode escape chars
+        return String.fromCharCode(parseInt(p1, 16));
+      })}"${p2}`;
+    });
+
+    return JSON.parse(json);
+  }
+
+  /**
+   * @returns {{offset: number, divider: number, negated: boolean}[][]}
+   */
+  getDecodeParams(code: string) {
+    // @ts-ignore
+    const jsDecodeInt = /while\(!!\[]\){try{var \w+=(?<code>.+?);/.exec(code)
+      .groups.code;
+    const decodeSections = jsDecodeInt.split('+');
+    const params = [];
+    for (const section of decodeSections) {
+      params.push(this.decodeParamSection(section));
+    }
+    return params;
+  }
+
+  /**
+   * @param {string} section
+   * @returns {{offset: number, divider: number, negated: boolean}[]}
+   */
+  decodeParamSection(section: string) {
+    const sections = section.split('*');
+    const params = [];
+    for (const section of sections) {
+      // @ts-ignore
+      const offsetStr = /parseInt\(\w+\(0x(?<offset>[0-9a-f]+)\)\)/.exec(
+        section,
+      ).groups.offset;
+      const offset = parseInt(offsetStr, 16);
+      // @ts-ignore
+      const dividerStr = /\/0x(?<divider>[0-9a-f]+)/.exec(section).groups
+        .divider;
+      const divider = parseInt(dividerStr, 16);
+      const negated = section.includes('-');
+      params.push({ offset, divider, negated });
+    }
+    return params;
+  }
+
+  getConstant(code: string) {
+    // @ts-ignore
+    const constantStr = /}}}\(\w+,0x(?<constant>[0-9a-f]+)\),/.exec(code).groups
+      .constant;
+    return parseInt(constantStr, 16);
+  }
+
+  getChapterData(
+    code: string,
+    getDataAt: { (x: number): any; (arg0: number): any },
+  ) {
+    let chapterDataStr =
+      // @ts-ignore
+      /\),\(function\(\){var \w+=\w+;return(?<data>{.+?});/.exec(code).groups
+        .data;
+
+    //replace hex with decimal
+    chapterDataStr = chapterDataStr.replace(/:0x([0-9a-f]+)/g, (match, p1) => {
+      const hex = parseInt(p1, 16);
+      return `: ${hex}`;
+    });
+
+    //replace ![] with false and !![] with true
+    chapterDataStr = chapterDataStr
+      .replace(/:!!\[]/g, ':true')
+      .replace(/:!\[]/g, ':false');
+
+    //replace string single quotes with double quotes and add escaped chars
+    chapterDataStr = chapterDataStr.replace(
+      /'(.+?)'([,\]}:])/g,
+      (match, p1, p2) => {
+        return `"${p1.replace(/\\x([0-9a-z]{2})/g, (match: any, p1: string) => {
+          //hexadecimal unicode escape chars
+          return String.fromCharCode(parseInt(p1, 16));
+        })}"${p2}`;
+      },
+    );
+
+    //parse the data getting methods
+    chapterDataStr = chapterDataStr.replace(
+      // @ts-ignore
+      /:\w+\(0x(?<offset>[0-9a-f]+)\)/g,
+      (match, p1) => {
+        const offset = parseInt(p1, 16);
+        return `:${JSON.stringify(getDataAt(offset))}`;
+      },
+    );
+
+    return JSON.parse(chapterDataStr);
+  }
+
+  /**
+   * @param {{offset: number, divider: number, negated: boolean}[][]} params
+   * @param {function(number): string} getDataAt
+   */
+  applyDecodeParams(
+    params: { offset: number; divider: number; negated: boolean }[][],
+    getDataAt: { (x: number): any; (arg0: any): string },
+  ) {
+    let res = 0;
+    for (const paramAdd of params) {
+      let resInner = 1;
+      for (const paramMul of paramAdd) {
+        resInner *= parseInt(getDataAt(paramMul.offset)) / paramMul.divider;
+        if (paramMul.negated) resInner *= -1;
+      }
+      res += resInner;
+    }
+    return res;
+  }
+
+  async parseChapter(chapterPath: string): Promise<string> {
+    const url = `${this.site}${chapterPath}/__data.json?x-sveltekit-invalidated=001`;
+    const json = await fetchApi(url).then(r => r.json());
+    const nodes = json.nodes;
+    const data = nodes
+      .filter((node: { type: string }) => node.type === 'data')
+      .map((node: { data: any }) => node.data)[0];
+    const content = data[data[0].gs] ?? data[19];
+    const footnotes = data[data[0].footnotes];
+    return content + (footnotes ?? '');
+  }
+
+  async searchNovels(
+    searchTerm: string,
+    pageNo: number,
+  ): Promise<Plugin.SourceNovel[]> {
+    if (pageNo !== 1) return [];
+    const url = `${this.site}/api/search?serialization=All&sort=Popular&title=${searchTerm}`;
+    const json = await fetchApi(url).then(r => r.json());
+    return this.parseNovels(json);
+  }
+
+  filters = {
+    sort: {
+      label: 'Sort Results By',
+      value: 'sort=Popular',
+      options: [
+        { label: 'Popular', value: 'sort=Popular' },
+        { label: 'Recent', value: 'sort=Recent' },
+        { label: 'Views', value: 'sort=Views' },
+      ],
+      type: FilterTypes.Picker,
+    },
+    storyStatus: {
+      label: 'Status',
+      value: 'serialization=All',
+      options: [
+        { label: 'All', value: 'serialization=All' },
+        { label: 'Ongoing', value: 'serialization=Ongoing' },
+        { label: 'Completed', value: 'serialization=Completed' },
+      ],
+      type: FilterTypes.Picker,
+    },
+    genres: {
+      label: 'Genres',
+      value: [],
+      options: [
+        { label: 'Action', value: 'genres=Action' },
+        { label: 'Comedy', value: 'genres=Comedy' },
+        { label: 'Drama', value: 'genres=Drama' },
+        { label: 'Fantasy', value: 'genres=Fantasy' },
+        { label: 'Harem', value: 'genres=Harem' },
+        { label: 'Martial Arts', value: 'genres=Martial+Arts' },
+        { label: 'Modern', value: 'genres=Modern' },
+        { label: 'Mystery', value: 'genres=Mystery' },
+        { label: 'Psychological', value: 'genres=Psychological' },
+        { label: 'Romance', value: 'genres=Romance' },
+        { label: 'Slice of life', value: 'genres=Slice+of+Life' },
+        { label: 'Tragedy', value: 'genres=Tragedy' },
+      ],
+      type: FilterTypes.CheckboxGroup,
+    },
+  } satisfies Filters;
+}
+
+export default new Genesis();
