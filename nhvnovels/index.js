@@ -1,41 +1,45 @@
-var t = require("cheerio"),
-    s = require("@libs/fetch"),
-    i = require("@libs/defaultCover"),
-    r = require("@libs/novelStatus");
+const t = require("cheerio");
+const s = require("@libs/fetch");
+const i = require("@libs/defaultCover");
+const r = require("@libs/novelStatus");
 
-var plugin = new (function () {
-    function plugin(e) {
-        var t, s;
-        this.id = e.id;
-        this.name = e.sourceName;
-        this.icon = "multisrc/lightnovelwp/".concat(e.id.toLowerCase(), "/icon.png");
-        this.site = e.sourceSite;
-        var i = (null === (t = e.options) || void 0 === t ? void 0 : t.versionIncrements) || 0;
-        this.version = "1.0.".concat(0 + i);
-        this.options = null !== (s = e.options) && void 0 !== s ? s : {};
+class NHVNovelsPlugin {
+    constructor({ id, sourceName, sourceSite, options }) {
+        this.id = id;
+        this.name = sourceName;
+        this.icon = `multisrc/lightnovelwp/${id.toLowerCase()}/icon.png`;
+        this.site = sourceSite;
+        this.version = `1.0.${options?.versionIncrements || 0}`;
+        this.options = options || {};
     }
 
-    plugin.prototype.safeFetch = function (url) {
-        return new Promise((resolve, reject) => {
-            (0, s.fetchApi)(url)
-                .then((response) => {
-                    if (!response.ok) {
-                        reject(new Error(`Failed to fetch (${response.status})`));
-                    }
-                    return response.text();
-                })
-                .then((data) => resolve(data))
-                .catch((error) => reject(error));
-        });
-    };
+    /**
+     * Fetch data from a given URL safely.
+     */
+    async safeFetch(url) {
+        try {
+            const response = await s.fetchApi(url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch (${response.status})`);
+            }
+            return await response.text();
+        } catch (error) {
+            console.error(`Error fetching URL: ${url}`, error.message);
+            throw error;
+        }
+    }
 
-    plugin.prototype.parseNovels = function (html) {
-        var $ = t.load(html),
-            novels = [];
-        $("div.novel-item").each(function () {
-            var title = $("h2.novel-title", this).text().trim();
-            var cover = $("img", this).attr("src") || i.defaultCover;
-            var link = $("a", this).attr("href");
+    /**
+     * Parse the novel list from HTML.
+     */
+    parseNovels(html) {
+        const $ = t.load(html);
+        const novels = [];
+
+        $("div.novel-item").each((_, element) => {
+            const title = $("h2.novel-title", element).text().trim();
+            const cover = $("img", element).attr("src") || i.defaultCover;
+            let link = $("a", element).attr("href");
 
             if (typeof link === "string" && link.length > 0) {
                 link = link.startsWith("http") ? link : `${this.site}${link}`;
@@ -50,25 +54,34 @@ var plugin = new (function () {
                 url: link,
             });
         });
+
         return novels;
-    };
+    }
 
-    plugin.prototype.fetchNovelList = function (page) {
-        var url = `${this.site}/novels/?page=${page}`;
-        return this.safeFetch(url)
-            .then((html) => this.parseNovels(html))
-            .catch((error) => {
-                console.error("Error fetching novel list:", error.message);
-                return [];
-            });
-    };
+    /**
+     * Fetch the list of novels for a given page.
+     */
+    async fetchNovelList(page) {
+        const url = `${this.site}/novels/?page=${page}`;
+        try {
+            const html = await this.safeFetch(url);
+            return this.parseNovels(html);
+        } catch (error) {
+            console.error("Error fetching novel list:", error.message);
+            return [];
+        }
+    }
 
-    plugin.prototype.parseNovelDetails = function (html) {
-        var $ = t.load(html),
-            chapters = [];
-        $("ul.chapter-list li").each(function () {
-            var name = $("a", this).text().trim();
-            var link = $("a", this).attr("href");
+    /**
+     * Parse novel details and chapters from HTML.
+     */
+    parseNovelDetails(html) {
+        const $ = t.load(html);
+        const chapters = [];
+
+        $("ul.chapter-list li").each((_, element) => {
+            const name = $("a", element).text().trim();
+            let link = $("a", element).attr("href");
 
             if (typeof link === "string" && link.length > 0) {
                 link = link.startsWith("http") ? link : `${this.site}${link}`;
@@ -89,34 +102,41 @@ var plugin = new (function () {
             summary: $("div.novel-summary").text().trim(),
             chapters: chapters,
         };
-    };
+    }
 
-    plugin.prototype.fetchNovelDetails = function (novelUrl) {
-        return this.safeFetch(novelUrl)
-            .then((html) => this.parseNovelDetails(html))
-            .catch((error) => {
-                console.error(`Error fetching novel details: ${error.message}`);
-                return null;
-            });
-    };
+    /**
+     * Fetch details of a specific novel.
+     */
+    async fetchNovelDetails(novelUrl) {
+        try {
+            const html = await this.safeFetch(novelUrl);
+            return this.parseNovelDetails(html);
+        } catch (error) {
+            console.error(`Error fetching novel details: ${error.message}`);
+            return null;
+        }
+    }
 
-    plugin.prototype.fetchChapterContent = function (chapterUrl) {
-        return this.safeFetch(chapterUrl)
-            .then((html) => {
-                var $ = t.load(html);
-                return $("div.chapter-content").html();
-            })
-            .catch((error) => {
-                console.error(`Error fetching chapter content: ${error.message}`);
-                return "Error loading chapter content.";
-            });
-    };
+    /**
+     * Fetch content of a specific chapter.
+     */
+    async fetchChapterContent(chapterUrl) {
+        try {
+            const html = await this.safeFetch(chapterUrl);
+            const $ = t.load(html);
+            return $("div.chapter-content").html();
+        } catch (error) {
+            console.error(`Error fetching chapter content: ${error.message}`);
+            return "Error loading chapter content.";
+        }
+    }
+}
 
-    return plugin;
-})({
+// Plugin instantiation and export
+const plugin = new NHVNovelsPlugin({
     id: "nhvnovels",
-    sourceSite: "https://nhvnovels.com/",
     sourceName: "NHV Novels",
+    sourceSite: "https://nhvnovels.com/",
     options: {},
 });
 
