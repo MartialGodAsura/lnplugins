@@ -12,7 +12,7 @@ import { Plugin } from '@typings/plugin';
  * -> to view chapter remove '__data.json?x-sveltekit-invalidated=001'
  */
 
-class Genesis implements Plugin.PluginBase {
+class Raei implements Plugin.PluginBase {
   id = 'raeitranslations';
   name = 'Raei Translations';
   icon = 'https://raw.githubusercontent.com/MartialGodAsura/lnplugins/refs/heads/main/assests/raei-icon.jpg';
@@ -391,4 +391,4 @@ class Genesis implements Plugin.PluginBase {
   } satisfies Filters;
 }
 
-export default new Genesis();
+export default new Raei();
