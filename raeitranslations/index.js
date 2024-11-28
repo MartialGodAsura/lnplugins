@@ -1,107 +1,65 @@
-import { fetchApi } from '@libs/fetch';
-import { Plugin } from '@typings/plugin';
-import { Filters } from '@libs/filterInputs';
-import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
-import { NovelStatus } from '@libs/novelStatus';
+const plugin = {
+    id: "raeitranslations",
+    name: "RaeiTranslations",
+    version: "1.0.0",
+    icon: "https://raw.githubusercontent.com/MartialGodAsura/lnplugins/refs/heads/main/assests/raei-icon.jpg",
+    site: "https://raeitranslations.com",
+    filters: {
+        search: {
+            query: "",
+        },
+    },
+    fetchNovels: async () => {
+        const url = `${plugin.site}/novels`;
+        const response = await fetch(url);
+        const html = await response.text();
 
-class RaeiTranslations implements Plugin.PluginBase {
-  id = 'raeitranslations';
-  name = 'Raei Translations';
-  icon = 'https://raeitranslations.com/favicon.ico';
-  site = 'https://raeitranslations.com';
-  version = '1.0.0';
-  filters: Filters | undefined = undefined;
+        // Parse novels list
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        const novels = [];
+        const novelElements = doc.querySelectorAll(".novel-list .novel-item");
 
-  async popularNovels(
-    pageNo: number,
-  ): Promise<Plugin.NovelItem[]> {
-    const novels: Plugin.NovelItem[] = [];
-    const url = `${this.site}/novels?page=${pageNo}`;
-    const body = await fetchApi(url).then(res => res.text());
-    const $ = loadCheerio(body);
+        novelElements.forEach(novel => {
+            novels.push({
+                title: novel.querySelector(".novel-title").textContent.trim(),
+                url: novel.querySelector("a").href,
+                cover: novel.querySelector("img").src,
+            });
+        });
 
-    $('div.novel-item').each((_, el) => {
-      const name = $(el).find('h2.novel-title').text().trim();
-      const path = $(el).find('a').attr('href') || '';
-      const cover = $(el).find('img').attr('src') || defaultCover;
+        return novels;
+    },
+    fetchChapters: async (novelUrl) => {
+        const response = await fetch(novelUrl);
+        const html = await response.text();
 
-      novels.push({
-        name,
-        path,
-        cover: cover.startsWith('http') ? cover : `${this.site}${cover}`,
-      });
-    });
+        // Parse chapters list
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        const chapters = [];
+        const chapterElements = doc.querySelectorAll(".chapter-list .chapter-item");
 
-    return novels;
-  }
+        chapterElements.forEach(chapter => {
+            chapters.push({
+                title: chapter.querySelector(".chapter-title").textContent.trim(),
+                url: chapter.querySelector("a").href,
+            });
+        });
 
-  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const url = `${this.site}${novelPath}`;
-    const body = await fetchApi(url).then(res => res.text());
-    const $ = loadCheerio(body);
+        return chapters;
+    },
+    fetchChapter: async (chapterUrl) => {
+        const response = await fetch(chapterUrl);
+        const html = await response.text();
 
-    const novel: Plugin.SourceNovel = {
-      path: novelPath,
-      name: $('h1.novel-title').text().trim(),
-      cover: $('div.novel-cover img').attr('src') || defaultCover,
-      author: $('span.author').text().trim(),
-      summary: $('div.novel-summary').text().trim(),
-      genres: $('div.genres').text().replace(/\s+/g, ', '),
-      status: $('span.status').text().includes('Ongoing')
-        ? NovelStatus.Ongoing
-        : NovelStatus.Completed,
-      chapters: [],
-    };
+        // Parse chapter content
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        const content = doc.querySelector(".chapter-content").innerHTML;
 
-    $('ul.chapter-list li').each((i, el) => {
-      const chapterName = $(el).find('a').text().trim();
-      const chapterPath = $(el).find('a').attr('href') || '';
-      const releaseTime = $(el).find('span.release-time').text().trim();
+        return { content };
+    },
+};
 
-      novel.chapters.push({
-        name: chapterName,
-        path: chapterPath,
-        releaseTime,
-        chapterNumber: i + 1,
-      });
-    });
-
-    return novel;
-  }
-
-  async parseChapter(chapterPath: string): Promise<string> {
-    const url = `${this.site}${chapterPath}`;
-    const body = await fetchApi(url).then(res => res.text());
-    const $ = loadCheerio(body);
-
-    const chapterText = $('div.chapter-content').html() || '';
-    return chapterText;
-  }
-
-  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const novels: Plugin.NovelItem[] = [];
-    const url = `${this.site}/search?query=${encodeURIComponent(searchTerm)}`;
-    const body = await fetchApi(url).then(res => res.text());
-    const $ = loadCheerio(body);
-
-    $('div.novel-item').each((_, el) => {
-      const name = $(el).find('h2.novel-title').text().trim();
-      const path = $(el).find('a').attr('href') || '';
-      const cover = $(el).find('img').attr('src') || defaultCover;
-
-      novels.push({
-        name,
-        path,
-        cover: cover.startsWith('http') ? cover : `${this.site}${cover}`,
-      });
-    });
-
-    return novels;
-  }
-
-  resolveUrl = (path: string, isNovel?: boolean) =>
-    this.site + (isNovel ? '/novel/' : '/chapter/') + path;
-}
-
-export default new RaeiTranslations();
+module.exports = plugin;
