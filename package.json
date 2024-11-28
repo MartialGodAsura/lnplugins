@@ -7,7 +7,8 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "lint": "eslint .",
-    "test": "jest"
+    "test": "jest",
+    "build:plugins": "node scripts/generate_plugins_json.js"
   },
   "keywords": ["LNReader", "plugins", "light novels", "raeitranslations"],
   "author": "Your Name",
