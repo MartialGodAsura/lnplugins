@@ -1,0 +1,25 @@
+{
+  "name": "lnplugins",
+  "version": "1.0.0",
+  "description": "A collection of plugins for LNReader, including the Raei Translations plugin.",
+  "main": "plugins/english/raeitranslations.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "lint": "eslint .",
+    "test": "jest"
+  },
+  "keywords": ["LNReader", "plugins", "light novels", "raeitranslations"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "jest": "^29.0.0"
+  }
+}
