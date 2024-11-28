@@ -1,24 +1,20 @@
-import { fetchApi } from '@libs/fetch';
-import { Plugin } from '@typings/plugin';
-import { Filters } from '@libs/filterInputs';
-import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
-import { NovelStatus } from '@libs/novelStatus';
+import { fetchApi } from '../../libs/fetch';
+import { PluginBase, NovelItem, SourceNovel, ChapterItem } from '../../types/plugin';
+import { defaultCover } from '../../libs/defaultCover';
+import { NovelStatus } from '../../libs/novelStatus';
 
-class RaeiTranslations implements Plugin.PluginBase {
+class RaeiTranslations implements PluginBase {
   id = 'raeitranslations';
   name = 'Raei Translations';
+  version = '1.0.0';
   icon = 'https://raeitranslations.com/favicon.ico';
   site = 'https://raeitranslations.com';
-  version = '1.0.0';
-  filters: Filters | undefined = undefined;
+  filters = undefined;
 
-  async popularNovels(
-    pageNo: number,
-  ): Promise<Plugin.NovelItem[]> {
-    const novels: Plugin.NovelItem[] = [];
+  async popularNovels(pageNo: number): Promise<NovelItem[]> {
+    const novels: NovelItem[] = [];
     const url = `${this.site}/novels?page=${pageNo}`;
-    const body = await fetchApi(url).then(res => res.text());
+    const body = await fetchApi(url).then((res) => res.text());
     const $ = loadCheerio(body);
 
     $('div.novel-item').each((_, el) => {
@@ -36,21 +32,19 @@ class RaeiTranslations implements Plugin.PluginBase {
     return novels;
   }
 
-  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+  async parseNovel(novelPath: string): Promise<SourceNovel> {
     const url = `${this.site}${novelPath}`;
-    const body = await fetchApi(url).then(res => res.text());
+    const body = await fetchApi(url).then((res) => res.text());
     const $ = loadCheerio(body);
 
-    const novel: Plugin.SourceNovel = {
-      path: novelPath,
+    const novel: SourceNovel = {
       name: $('h1.novel-title').text().trim(),
+      path: novelPath,
       cover: $('div.novel-cover img').attr('src') || defaultCover,
       author: $('span.author').text().trim(),
       summary: $('div.novel-summary').text().trim(),
       genres: $('div.genres').text().replace(/\s+/g, ', '),
-      status: $('span.status').text().includes('Ongoing')
-        ? NovelStatus.Ongoing
-        : NovelStatus.Completed,
+      status: $('span.status').text().includes('Ongoing') ? NovelStatus.Ongoing : NovelStatus.Completed,
       chapters: [],
     };
 
@@ -72,17 +66,17 @@ class RaeiTranslations implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const url = `${this.site}${chapterPath}`;
-    const body = await fetchApi(url).then(res => res.text());
+    const body = await fetchApi(url).then((res) => res.text());
     const $ = loadCheerio(body);
 
     const chapterText = $('div.chapter-content').html() || '';
     return chapterText;
   }
 
-  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const novels: Plugin.NovelItem[] = [];
+  async searchNovels(searchTerm: string): Promise<NovelItem[]> {
+    const novels: NovelItem[] = [];
     const url = `${this.site}/search?query=${encodeURIComponent(searchTerm)}`;
-    const body = await fetchApi(url).then(res => res.text());
+    const body = await fetchApi(url).then((res) => res.text());
     const $ = loadCheerio(body);
 
     $('div.novel-item').each((_, el) => {
@@ -100,8 +94,9 @@ class RaeiTranslations implements Plugin.PluginBase {
     return novels;
   }
 
-  resolveUrl = (path: string, isNovel?: boolean) =>
-    this.site + (isNovel ? '/novel/' : '/chapter/') + path;
+  resolveUrl(path: string, isNovel = false): string {
+    return `${this.site}${isNovel ? '/novel/' : '/chapter/'}${path}`;
+  }
 }
 
 export default new RaeiTranslations();
