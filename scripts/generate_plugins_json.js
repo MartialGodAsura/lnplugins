@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const pluginsDir = './plugins';
-const iconsDir = './assets/';
+const iconsDir = './assets';
 const outputDir = './.dist';
 const outputFile = 'plugins.min.json';
 
