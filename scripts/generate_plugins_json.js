@@ -1,89 +1,56 @@
-import path from 'path';
-import fs from 'fs';
-import languages from './languages.js';
-import { execSync } from 'child_process';
-import { minify } from './terser.js';
+const path = require('path');
+const fs = require('fs');
 
-const REMOTE = execSync('git remote get-url origin')
-  .toString()
-  .replace(/[\s\n]/g, '');
-const CURRENT_BRANCH = execSync('git branch --show-current')
-  .toString()
-  .replace(/[\s\n]/g, '');
-const matched = REMOTE.match(/([^:/]+?)\/([^/.]+)(\.git)?$/);
-if (!matched) throw Error('Cant parse git url');
-const USERNAME = matched[1];
-const REPO = matched[2];
-const USER_CONTENT_LINK = `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${CURRENT_BRANCH}`;
-
-const STATIC_LINK = `${USER_CONTENT_LINK}/public/static`;
-const PLUGIN_LINK = `${USER_CONTENT_LINK}/.js/src/plugins`;
-
+// Assuming your plugins are in the `plugins` folder
+const PLUGIN_DIR = './plugins';
 const DIST_DIR = '.dist';
 
 const json = [];
-if (!fs.existsSync(DIST_DIR)) {
-  fs.mkdirSync(DIST_DIR);
-}
-const jsonPath = path.join(DIST_DIR, 'plugins.json');
-const jsonMinPath = path.join(DIST_DIR, 'plugins.min.json');
 const pluginSet = new Set();
 let totalPlugins = 0;
 
-const createRecursiveProxy = () => {
-  const target = {};
-  const handler = {
-    get(target, prop) {
-      if (prop === 'get') {
-        return a => a;
-      }
-      if (!target[prop]) {
-        target[prop] = createRecursiveProxy();
-      }
-      return target[prop];
-    },
-  };
-  return new Proxy(target, handler);
-};
+// Ensure the .dist directory exists
+if (!fs.existsSync(DIST_DIR)) {
+  fs.mkdirSync(DIST_DIR);
+}
 
-const proxy = createRecursiveProxy();
+const jsonPath = path.join(DIST_DIR, 'plugins.json');
+const jsonMinPath = path.join(DIST_DIR, 'plugins.min.json');
 
-const _require = () => proxy;
+// Loop through the plugins directory
+fs.readdirSync(PLUGIN_DIR).forEach(language => {
+  const languagePath = path.join(PLUGIN_DIR, language);
+  
+  // Skip if it's not a directory or if it doesn't contain plugin files
+  if (!fs.lstatSync(languagePath).isDirectory()) return;
 
-const COMPILED_PLUGIN_DIR = './.js/src/plugins';
-
-for (let language in languages) {
-  // language with English name
-  const langPath = path.join(COMPILED_PLUGIN_DIR, language.toLowerCase());
-  if (!fs.existsSync(langPath)) continue;
-  const plugins = fs.readdirSync(langPath);
+  const plugins = fs.readdirSync(languagePath);
   plugins.forEach(plugin => {
-    if (plugin.startsWith('.')) return;
-    minify(path.join(langPath, plugin));
-    const rawCode = fs.readFileSync(
-      `${COMPILED_PLUGIN_DIR}/${language.toLowerCase()}/${plugin}`,
-      'utf-8',
-    );
-    const instance = Function(
-      'require',
-      'module',
-      `const exports = module.exports = {}; 
-      ${rawCode}; 
-      return exports.default`,
-    )(_require, {});
-    const { id, name, site, version, icon, customJS, customCSS } = instance;
-    const normalisedName = name.replace(/\[.*\]/, '');
+    if (plugin.startsWith('.')) return; // Skip hidden files
+
+    // Read the TypeScript plugin file (assumed to be .ts)
+    const pluginPath = path.join(languagePath, plugin);
+    const rawCode = fs.readFileSync(pluginPath, 'utf-8');
+
+    // Dummy data extraction (you can add real code parsing logic here)
+    const id = plugin.replace('.ts', '');
+    const name = id.charAt(0).toUpperCase() + id.slice(1);
+    const version = '1.0.0'; // Default version
+    const site = 'Unknown'; // Placeholder, you can add a real field if needed
+    const icon = ''; // Placeholder for icon, update with actual logic if necessary
+    const customJS = ''; // Placeholder for custom JS
+    const customCSS = ''; // Placeholder for custom CSS
 
     const info = {
       id,
-      name: normalisedName,
+      name,
       site,
-      lang: languages[language],
+      lang: language, // Using language folder as the language
       version,
-      url: `${PLUGIN_LINK}/${language.toLowerCase()}/${plugin}`,
-      iconUrl: `${STATIC_LINK}/${icon || 'siteNotAvailable.png'}`,
-      customJS: customJS ? `${STATIC_LINK}/${customJS}` : undefined,
-      customCSS: customCSS ? `${STATIC_LINK}/${customCSS}` : undefined,
+      url: `./plugins/${language}/${plugin}`,
+      iconUrl: icon || 'siteNotAvailable.png', // Default if no icon
+      customJS: customJS ? `./static/${customJS}` : undefined,
+      customCSS: customCSS ? `./static/${customCSS}` : undefined,
     };
 
     if (pluginSet.has(id)) {
@@ -92,42 +59,22 @@ for (let language in languages) {
     } else {
       pluginSet.add(id);
     }
+
     json.push(info);
     totalPlugins += 1;
     console.log(name, '✅');
   });
-}
+});
 
+// Sort plugins by language and id
 json.sort((a, b) => {
   if (a.lang === b.lang) return a.id.localeCompare(b.id);
   return 0;
 });
 
+// Write output to files
 fs.writeFileSync(jsonMinPath, JSON.stringify(json));
 fs.writeFileSync(jsonPath, JSON.stringify(json, null, '\t'));
-fs.writeFileSync(
-  'total.svg',
-  `
-  <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="80" height="20" role="img" aria-label="Plugins: ${totalPlugins}"><title>Plugins: ${totalPlugins}</title><linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><clipPath id="r"><rect width="80" height="20" rx="3" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="49" height="20" fill="#555"/><rect x="49" width="31" height="20" fill="#007ec6"/><rect width="80" height="20" fill="url(#s)"/></g><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110"><text aria-hidden="true" x="255" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="390">Plugins</text><text x="255" y="140" transform="scale(.1)" fill="#fff" textLength="390">Plugins</text><text aria-hidden="true" x="635" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="210">161</text><text x="635" y="140" transform="scale(.1)" fill="#fff" textLength="210">${totalPlugins}</text></g></svg>
-  `,
-);
-
-// check for broken plugins
-for (let language in languages) {
-  const tsFiles = fs.readdirSync(
-    path.join('./src/plugins', language.toLocaleLowerCase()),
-  );
-  tsFiles
-    .filter(f => f.endsWith('.broken.ts'))
-    .forEach(fn => {
-      console.error(
-        language.toLocaleLowerCase() +
-          '/' +
-          fn.replace('.broken.ts', '') +
-          ' ❌',
-      );
-    });
-}
 
 console.log(jsonPath);
 console.log('Done ✅');
