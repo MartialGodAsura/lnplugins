@@ -35,8 +35,13 @@ function generatePluginsJson() {
     });
   });
 
-  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
-  fs.writeFileSync(path.join(outputDir, outputFile), JSON.stringify({ plugins }, null, 2));
+  // Ensure output directory exists
+  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+
+  // Write JSON to file
+  const outputPath = path.join(outputDir, outputFile);
+  fs.writeFileSync(outputPath, JSON.stringify({ plugins }, null, 2));
+
   console.log(`Generated ${outputFile} in ${outputDir}`);
 }
 
